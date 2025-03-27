@@ -3,9 +3,11 @@
 
 
 vector<unique_ptr<mutex>> Philosopher::forkList;
-vector<bool> Philosopher::forkStatus;
-vector<bool> Philosopher::requestFork;
+vector<bool> Philosopher::forkDirty;
+vector<unique_ptr<binary_semaphore>> Philosopher::forkSem;
 mutex Philosopher::output;
+vector<bool> Philosopher::hasLeftFork;
+vector<bool> Philosopher::hasRightFork;
 
 int main()
 {
@@ -26,19 +28,30 @@ int main()
         }
     }
 
-    Philosopher::forkStatus.resize(numberOfPhilosophers, false);
-    Philosopher::requestFork.resize(numberOfPhilosophers, false);
+    Philosopher::forkDirty.resize(numberOfPhilosophers, true);
+    Philosopher::hasLeftFork.resize(numberOfPhilosophers, false);
+    Philosopher::hasRightFork.resize(numberOfPhilosophers, false);
+    Philosopher::forkSem.resize(numberOfPhilosophers);
+
     Philosopher::forkList.clear();
-    for (int i = 0; i < numberOfPhilosophers; ++i) {
+    for (int i = 0; i < numberOfPhilosophers; i++)
+    {
         Philosopher::forkList.push_back(std::make_unique<std::mutex>());
     }
 
-    for(int i = 0; i<numberOfPhilosophers; i++)
+    Philosopher::forkSem.clear();
+    for (int i = 0; i < numberOfPhilosophers; i++)
+    {
+        Philosopher::forkSem.push_back(std::make_unique<std::binary_semaphore>(1));
+    }
+
+
+    for(int i = 0; i < numberOfPhilosophers; i++)
     {
         philosopher.emplace_back(i,numberOfPhilosophers);
     }
 
-    for(int i = 0; i<numberOfPhilosophers; i++)
+    for(int i = 0; i < numberOfPhilosophers; i++)
     {
         philosophers.emplace_back(&Philosopher::start,&philosopher[i]);
     }

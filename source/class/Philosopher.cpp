@@ -6,33 +6,39 @@
 #include "../headers/Philosopher.h"
 
 default_random_engine generator(chrono::system_clock::now().time_since_epoch().count());
-std::uniform_int_distribution<int> dist(1000, 3000);
+std::uniform_int_distribution<int> dist(1000, 1000);
 
 Philosopher::Philosopher(int index, int n)
 {
         id = index;
         leftFork = id;
         rightFork = (id+1)%n;
+        leftNeighbour = (id+n-1)%n;
+        rightNeighbour = (id+1)%n;
 
         if(id<rightFork)
-            forkStatus[leftFork] = true;
+        {
+            forkSem[id] -> acquire();
+            hasLeftFork[id] = true;
 
-        cout<<id<<"\t"<<leftFork<<"\t"<<rightFork<<"\t"<<forkStatus[leftFork]<<endl;
+        }
+        if(id == 0)
+        {
+            forkSem[n-1] -> acquire();
+            hasRightFork[id] = true;
+        }
 }
 
 void Philosopher::start()
 {
     while(true)
     {
-            thinking();
-            waiting_for_fork();
-            eating();
-            releasing_forks();
+        thinking();
+        waiting_for_forks();
+        eating();
+        releasing_forks();
     }
-
 }
-
-
 
 void Philosopher::eating()
 {
@@ -50,65 +56,63 @@ void Philosopher::thinking()
         cout<<"Filozof "<<id<<" myśli"<<endl;
     }
     this_thread::sleep_for(chrono::milliseconds(dist(generator)));
-
 }
 
-void Philosopher::waiting_for_fork()
+void Philosopher::waiting_for_forks()
 {
     {
         lock_guard<std::mutex> lock(output);
         cout<<"Filozof "<<id<<" czeka na widelce"<<endl;
     }
-
-    if(!forkStatus[leftFork])
+    if(!hasLeftFork[id])
     {
-        requestFork[leftFork] = true;
-
-        while(!forkStatus[leftFork])
-        {
-            // just wait, be patient :)
-        }
+        request_fork(leftFork);
+        hasLeftFork[id] = true;
     }
-    forkList[leftFork]->lock();
-
-
-    if(!forkStatus[rightFork])
+    if(!hasRightFork[id])
     {
-        requestFork[rightFork] = true;
-
-        while(!forkStatus[rightFork])
-        {
-            // just wait, be patient :)
-        }
+        request_fork(rightFork);
+        hasRightFork[id] = true;
     }
-    forkList[rightFork]->lock();
 
-
+    lock_guard<std::mutex> lock(output);
+    cout<<"Filozof "<<id<<" otrzymał widelec"<<endl;
 }
 
 void Philosopher::releasing_forks()
 {
+
     {
         lock_guard<std::mutex> lock(output);
         cout<<"Filozof "<<id<<" oddaje widelce"<<endl;
     }
+    forkSem[rightFork]->release();
+    hasRightFork[id] = false;
+    forkDirty[rightFork] = true;
 
-    forkList[leftFork]->unlock();
-    forkStatus[leftFork] = false;
-    if(requestFork[leftFork])
+    forkSem[leftFork]->release();
+    hasLeftFork[id] = false;
+    forkDirty[leftFork] = true;
+}
+
+void Philosopher::request_fork(int forkid)
+{
+    if(forkDirty[forkid])
     {
-        forkStatus[leftFork] = true;
-        requestFork[leftFork] = false;
+        forkSem[forkid] ->release();
+        if(forkid == leftFork)
+        {
+            hasRightFork[leftNeighbour] = false;
+        }
+        else if(forkid == rightFork)
+        {
+            hasLeftFork[rightNeighbour] = false;
+        }
+
     }
 
-    forkList[rightFork]->unlock();
-    forkStatus[rightFork] = false;
-    if(requestFork[rightFork])
-    {
-        forkStatus[rightFork] = true;
-        requestFork[rightFork] = false;
-    }
-
+    forkSem[forkid] -> acquire();
+    forkDirty[forkid] = false;
 
 }
 

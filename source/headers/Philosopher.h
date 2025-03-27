@@ -12,6 +12,7 @@
 #include <iostream>
 #include <random>
 #include <windows.h>
+#include <semaphore>
 
 using namespace std;
 
@@ -23,8 +24,10 @@ class Philosopher{
 
         static vector<unique_ptr<mutex>>  forkList;
         static mutex output;
-        static vector<bool> forkStatus;
-        static vector<bool> requestFork;
+        static vector<bool> forkDirty;
+        static vector<bool> hasLeftFork;
+        static vector<bool> hasRightFork;
+        static vector<unique_ptr<binary_semaphore>> forkSem;
 
         Philosopher(int index, int n);
         void start();
@@ -34,11 +37,17 @@ class Philosopher{
         int id;
         int leftFork;
         int rightFork;
+        int leftNeighbour;
+        int rightNeighbour;
+//        bool hasLeftFork;
+//        bool hasRightFork;
+
 
         void eating();
         void thinking();
-        void waiting_for_fork();
+        void waiting_for_forks();
         void releasing_forks();
+        void request_fork(int id);
 
 
 };
