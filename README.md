@@ -21,7 +21,7 @@ Należy otworzyć okno konsoli / wiersza poleceń, a następnie przejść do lok
 W ramach polecenia wywołującego należy podać nazwę pliku oraz liczbę filozofów jako argument. Przykład wywołania poniżej:
 
 ```cmd
-C:\\\{Path_to_file\}> Projekt1.exe 10 
+C:\{Path_to_file}> Projekt1.exe 10 
 ```
 
 ## Opis problemu
